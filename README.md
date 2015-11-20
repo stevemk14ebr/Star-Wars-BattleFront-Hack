@@ -14,4 +14,4 @@ Personal SWBF Hack, internal c++ dll
   - DaMenu
   
 #License
-BSD
+GNU
