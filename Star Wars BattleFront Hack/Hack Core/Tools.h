@@ -207,6 +207,28 @@ void ConnectBones(RenderInterface* pRend, const Color& color, ClientRagdollCompo
 	pRend->DrawLine(Vector2f(Bone1Vec.x, Bone1Vec.y), Vector2f(Bone2Vec.x, Bone2Vec.y), color);
 }
 
+void ConnectBones(RenderInterface* pRend, const Color& color, ClientRagdollComponent* pRag, const char* Bone1, const char* Bone2)
+{
+	if (!PLH::IsValidPtr(pRag))
+		return;
+
+	SM::Vector3 Bone1Vec;
+	if (!pRag->GetBone(Bone1, Bone1Vec))
+		return;
+
+	SM::Vector3 Bone2Vec;
+	if (!pRag->GetBone(Bone2, Bone2Vec))
+		return;
+
+	if (!WorldToScreen(Bone1Vec))
+		return;
+
+	if (!WorldToScreen(Bone2Vec))
+		return;
+
+	pRend->DrawLine(Vector2f(Bone1Vec.x, Bone1Vec.y), Vector2f(Bone2Vec.x, Bone2Vec.y), color);
+}
+
 bool TransformDrawAABB(ClientControllableEntity* pEnt, RenderInterface* Renderer, Color color)
 {
 	TransformAABBStruct TransAABB;

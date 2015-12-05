@@ -286,6 +286,7 @@ HRESULT __stdcall hkPresent(IDXGISwapChain* thisptr, UINT SyncInterval, UINT Fla
 	}
 	m_HackCore.UpdatePresent();
 	m_HackCore.ESP(Renderer);
+	m_HackCore.EntityESP(Renderer);
 
 	return oPresent(thisptr, SyncInterval, Flags);
 }
@@ -310,10 +311,11 @@ BOOL __stdcall hkBitBlt(HDC hdcDest, int nXDest, int nYDest, int nWidth,
 DWORD WINAPI InitThread(LPVOID lparam)
 {
 	CreateConsole();
+	XTrace("Injected\n");
 	DX11Renderer* DXRend = DX11Renderer::GetInstance();
 	if (!PLH::IsValidPtr(DXRend))
 		return 0;
-
+	XTrace("Hooking\n");
 	PLHSwapChainhk = new PLH::VTableSwap();
 	PLHSwapChainhk->SetupHook((BYTE*)DXRend->m_pScreen->m_pSwapChain, 8, (BYTE*)&hkPresent);
 	PLHSwapChainhk->Hook();

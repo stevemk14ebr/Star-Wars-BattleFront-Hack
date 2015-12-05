@@ -1,9 +1,12 @@
 // Generated using ReClass 2014
 #pragma once
-#define OFFSET_DX11RENDERER 0x142E1A330;
-#define OFFSET_MAIN 0x1429FF0C0;
-#define OFFSET_GAMERENDERER 0x142E1A498;
+#define OFFSET_DX11RENDERER 0x142E2C4B0//0x142E1A330;
+#define OFFSET_MAIN 0x142A111D0//0x1429FF0C0;
+#define OFFSET_GAMERENDERER 0x142E2C618//0x142E1A498;
+#define OFFSET_GETENTITYLIST 0x143B32090 //0x143B099C0;
+#define OFFSET_FIRSTTYPEINFO 0x142A2B648
 
+#include "Engine/TypeInfo.h"
 #include <d3d11.h>
 class Main;
 class Client;
@@ -65,10 +68,30 @@ public:
 	char _0x0058[32];
 };//Size=0x0078
 
-class GameContext
+class PhysicsManager
 {
 public:
 	char _0x0000[64];
+};//Size=0x0040
+
+class Level
+{
+public:
+	char _0x0000[24];
+	__int64 m_LevelData; //0x0018 
+	char _0x0020[232];
+	PhysicsManager* m_pHavokPhysicsManager; //0x0108 
+	char _0x0110[8];
+	__int64 m_pGameWorld; //0x0118 
+	char _0x0120[16];
+};//Size=0x0130
+
+class GameContext
+{
+public:
+	char _0x0000[48];
+	Level* m_pLevel; //0x0030 
+	char _0x0038[8];
 };//Size=0x0040
 
 class ClientSettings
@@ -815,6 +838,26 @@ public:
 	unsigned char m_PoseNeeded; //0x0042 
 };//Size=0x0043
 
+class SkeletonAsset
+{
+public:
+	char _0x0000[24];
+	char** m_ppBoneNames; //0x0018 
+};//Size=0x0020
+
+class AnimationSkeleton
+{
+public:
+	SkeletonAsset* m_SkeletonAsset; //0x0000 
+	__int32 m_BoneCount; //0x0008 
+	char* GetBoneNameAt(int i)
+	{
+		if (i <= m_BoneCount)
+			return m_SkeletonAsset->m_ppBoneNames[i];
+		return "";
+	}
+};//Size=0x000C
+
 class ClientRagdollComponent
 {
 public:
@@ -843,27 +886,39 @@ public:
 		}
 		return false;
 	}
+	bool GetBone(const char* BoneName, SM::Vector3& BoneOut)
+	{
+		int BoneId = -1;
+
+		AnimationSkeleton* pSkeleton = m_AnimationSkeleton;
+		if (!PLH::IsValidPtr(pSkeleton))
+			return false;
+
+		for (int i = 0; i < pSkeleton->m_BoneCount; i++)
+		{
+			char* name = pSkeleton->GetBoneNameAt(i);
+			if (_stricmp(name, BoneName) == 0)
+				BoneId = i;
+		}
+
+		if (BoneId == -1)
+			return false;
+
+		UpdatePoseResultData PoseResult = this->m_PoseResultData;
+		if (PoseResult.m_ValidTransforms)
+		{
+			QuatTransform* pQuat = PoseResult.m_ActiveWorldTransforms;
+			if (!PLH::IsValidPtr(pQuat))
+				return false;
+
+			SM::Vector4 Bone = pQuat[BoneId].m_TransAndScale;
+			BoneOut = SM::Vector3(Bone.x, Bone.y, Bone.z);
+			return true;
+		}
+		return false;
+	}
 };//Size=0x0163
 
-class SkeletonAsset
-{
-public:
-	char _0x0000[24];
-	char** m_ppBoneNames; //0x0018 
-};//Size=0x0020
-
-class AnimationSkeleton
-{
-public:
-	SkeletonAsset* m_SkeletonAsset; //0x0000 
-	__int32 m_BoneCount; //0x0008 
-	char* GetBoneNameAt(int i)
-	{
-		if (i <= m_BoneCount)
-			return m_SkeletonAsset->m_ppBoneNames[i];
-		return "";
-	}
-};//Size=0x000C
 
 class ClientVehicleEntity
 {
@@ -944,7 +999,58 @@ public:
 	}
 };//Size=0x0060
 
+template <class T> class EntityIterator
+{
+public:
+	class Element
+	{
+	public:
 
+		Element* m_pFlink;
+		Element* m_pBlink;
+		__int32  m_Unk1;
+		__int32  m_Unk2;
+
+		T* getObject()
+		{
+			intptr_t pObject = reinterpret_cast<intptr_t>(this);
+			pObject -= 0x40;
+
+			return reinterpret_cast<T*>(pObject);
+		}
+	};
+
+	Element* m_pFirst;
+	Element* m_pCurrent;
+
+	EntityIterator(void* pGameWorld, void* pClassInfo)
+	{
+		typedef Element* (__thiscall* tGetEntityList)(void* pClassInfo, void* pThis);
+		tGetEntityList lpGetEntityList = reinterpret_cast<tGetEntityList>(OFFSET_GETENTITYLIST);
+
+		this->m_pFirst = lpGetEntityList(pClassInfo, pGameWorld);
+		this->m_pCurrent = this->m_pFirst;
+	}
+
+	bool hasNext()
+	{
+		if (m_pCurrent && m_pCurrent->m_pFlink)
+			return true;
+
+		return false;
+	}
+
+	Element* first() { return m_pFirst; }
+	Element* front() { return m_pCurrent; }
+	Element* next()
+	{
+		if (!m_pFirst)
+			return nullptr;
+
+		m_pCurrent = m_pCurrent->m_pFlink;
+		return m_pCurrent;
+	}
+};
 
 
 

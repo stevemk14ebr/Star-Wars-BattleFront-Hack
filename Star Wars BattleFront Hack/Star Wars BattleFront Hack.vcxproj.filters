@@ -197,6 +197,9 @@
     <ClInclude Include="Hack Core\BotPlayerManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\TypeInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="DXTK\Inc\SimpleMath.inl">

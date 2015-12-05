@@ -195,6 +195,7 @@
     <ClInclude Include="DXTK\Inc\WICTextureLoader.h" />
     <ClInclude Include="DXTK\Inc\XboxDDSTextureLoader.h" />
     <ClInclude Include="Engine\SWBFClasses.h" />
+    <ClInclude Include="Engine\TypeInfo.h" />
     <ClInclude Include="Hack Core\BotPlayerManager.h" />
     <ClInclude Include="Hack Core\Core.h" />
     <ClInclude Include="Hack Core\Tools.h" />

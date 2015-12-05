@@ -6,6 +6,9 @@ struct ESPSettings
 	Color m_EnemyVisible;
 	Color m_FriendlyNotVisible;
 	Color m_FriendlyVisible;
+	Color m_BulletsColor;
+	Color m_VehiclesColor;
+
 	bool m_Enabled;
 	bool m_ShowFriendlies;
 	bool m_SnapLinesEnabled;
@@ -17,6 +20,9 @@ struct ESPSettings
 		m_EnemyVisible = Color::Green();
 		m_FriendlyNotVisible = Color(.88f, .21f, 1.f); //purple
 		m_FriendlyVisible = Color::Blue();
+		m_BulletsColor = Color::Black();
+		m_VehiclesColor = Color::White();
+
 		m_Enabled = true;
 		m_ShowFriendlies = false;
 		m_SnapLinesEnabled = true;
@@ -38,13 +44,21 @@ struct AimbotSettings
 		m_MaxTimeToTarget = 1.2f;
 	}
 };
+struct ClassInfos
+{
+	ClassInfo* m_Bullets;
+	ClassInfo* m_Vehicles;
+	ClassInfo* m_Missiles;
+};
 
 #include "Hack Core/BotPlayerManager.h"
 class Core
 {
 public:
+	Core();
 	void UpdatePresent();
 	void ESP(RenderInterface* Renderer);
+	void EntityESP(RenderInterface* Renderer);
 	ESPSettings& GetESPSettings()
 	{
 		return m_ESPSettings;
@@ -55,10 +69,36 @@ public:
 	}
 private:
 	void DumpBoneIDs();
+	ClassInfo* FindClassInfo(const char* ClassName)
+	{
+		TypeInfo* CurrentTypeInfo = TypeInfo::GetFirst();
+		if (!PLH::IsValidPtr(CurrentTypeInfo))
+			return nullptr;
+		do
+		{
+			if (_stricmp(CurrentTypeInfo->m_InfoData->m_Name, ClassName) != 0)
+				continue;
+
+			if (CurrentTypeInfo->GetTypeCode() != BasicTypesEnum::kTypeCode_Class)
+				continue;
+
+			return (ClassInfo*)CurrentTypeInfo;
+		} while ((CurrentTypeInfo = CurrentTypeInfo->m_Next) != nullptr);
+		return nullptr;
+	}
+
+	ClassInfos m_ClassInfos;
 	ESPSettings m_ESPSettings;
 	AimbotSettings m_AimbotSettings;
 	BotPlayerManager m_PresentPlayerManager;
 };
+
+Core::Core()
+{
+	m_ClassInfos.m_Bullets = FindClassInfo("WSClientBulletEntity");
+	m_ClassInfos.m_Vehicles = FindClassInfo("ClientVehicleEntity");
+	m_ClassInfos.m_Missiles = FindClassInfo("WSClientMissileEntity");
+}
 
 void Core::DumpBoneIDs()
 {
@@ -150,7 +190,6 @@ void Core::ESP(RenderInterface* Renderer)
 			if (!WorldToScreen(Trans))
 				continue;
 
-			XTrace("%f %f\n", Trans.x, Trans.y);
 			Renderer->BeginLine();
 			Renderer->DrawLine(Vector2f(StartX, StartY), Vector2f(Trans.x, Trans.y), ESPColor);
 			Renderer->EndLine();
@@ -163,21 +202,67 @@ void Core::ESP(RenderInterface* Renderer)
 				continue;
 
 			Renderer->BeginLine();
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Head, UpdatePoseResultData::Neck);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Neck, UpdatePoseResultData::Spine2);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Spine2, UpdatePoseResultData::Spine1);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Spine1, UpdatePoseResultData::Spine);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Neck, UpdatePoseResultData::LeftShoulder);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::LeftShoulder, UpdatePoseResultData::LeftElbowRoll);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::RightShoulder, UpdatePoseResultData::RightElbowRoll);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::LeftElbowRoll, UpdatePoseResultData::LeftHand);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::RightElbowRoll, UpdatePoseResultData::RightHand);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Spine, UpdatePoseResultData::RightKneeRoll);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::Spine, UpdatePoseResultData::LeftKneeRoll);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::RightKneeRoll, UpdatePoseResultData::RightFoot);
-			ConnectBones(Renderer, ESPColor, pEnemyRag, UpdatePoseResultData::LeftKneeRoll, UpdatePoseResultData::LeftFoot);
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Head", "Neck");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Neck", "Spine2");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Spine2", "Spine1");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Spine1", "Spine");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Neck", "LeftShoulder");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "LeftShoulder", "LeftElbowRoll");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "RightShoulder", "RightElbowRoll");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "LeftElbowRoll", "LeftHand");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "RightElbowRoll", "RightHand");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Spine", "RightKneeRoll");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "Spine", "LeftKneeRoll");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "RightKneeRoll", "RightFoot");
+			ConnectBones(Renderer, ESPColor, pEnemyRag, "LeftKneeRoll", "LeftFoot");
 			Renderer->EndLine();
 		}
 		TransformDrawAABB(pEnemySoldier, Renderer, ESPColor);
+	}
+}
+
+void Core::EntityESP(RenderInterface* Renderer)
+{
+	Main* pMain = Main::GetInstance();
+	if (!PLH::IsValidPtr(pMain))
+		return;
+
+	EntityIterator<ClientControllableEntity> Bullets((void*)pMain->m_Client->m_GameContext->m_pLevel->m_pGameWorld, m_ClassInfos.m_Bullets);
+	if (Bullets.front())
+	{
+		do
+		{
+			ClientControllableEntity* pEnt = Bullets.front()->getObject();
+			if (!PLH::IsValidPtr(pEnt))
+				continue;
+
+			TransformDrawAABB(pEnt, Renderer, m_ESPSettings.m_BulletsColor);
+		} while (Bullets.next());
+	}
+
+	EntityIterator<ClientControllableEntity> Vehicles((void*)pMain->m_Client->m_GameContext->m_pLevel->m_pGameWorld, m_ClassInfos.m_Vehicles);
+	if (Vehicles.front())
+	{
+		do
+		{
+			ClientControllableEntity* pEnt = Vehicles.front()->getObject();
+			if (!PLH::IsValidPtr(pEnt))
+				continue;
+
+			TransformDrawAABB(pEnt, Renderer, m_ESPSettings.m_VehiclesColor);
+		} while (Vehicles.next());
+	}
+
+	EntityIterator<ClientControllableEntity> Missiles((void*)pMain->m_Client->m_GameContext->m_pLevel->m_pGameWorld, m_ClassInfos.m_Missiles);
+	if (Missiles.front())
+	{
+		do
+		{
+			ClientControllableEntity* pEnt = Missiles.front()->getObject();
+			if(!PLH::IsValidPtr(pEnt))
+				continue;
+
+			TransformDrawAABB(pEnt, Renderer, m_ESPSettings.m_BulletsColor);
+		} while (Missiles.next());
 	}
 }
